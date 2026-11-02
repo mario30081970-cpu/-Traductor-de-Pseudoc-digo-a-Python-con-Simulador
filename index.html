@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traductor de Pseudocódigo a Python con Simulador</title>
+    <!-- Tailwind CSS para estilos modernos y modo oscuro -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <!-- Prism.js para resaltado de sintaxis -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <style>
+        .linea-activa { background-color: rgba(255, 255, 0, 0.3) !important; border-left: 3px solid #fbbf24; }
+        .dark .linea-activa { background-color: rgba(255, 255, 0, 0.15) !important; }
+        textarea { font-family: 'Fira Code', 'Consolas', monospace; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-300 min-h-screen flex flex-col">
+
+    <!-- Encabezado -->
+    <header class="bg-blue-600 dark:bg-blue-800 text-white p-4 shadow-md">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold">📘 Traductor de Pseudocódigo a Python con Simulador</h1>
+                <p class="text-blue-100 text-sm mt-1">Traduce, ejecuta paso a paso, visualiza variables y descarga tu código listo para entregar.</p>
+            </div>
+            <div class="flex gap-2">
+                <select id="selector-ejercicios" class="bg-white dark:bg-gray-700 text-gray-800 dark:text-white px-3 py-2 rounded border border-gray-300 dark:border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <option value="">📚 Cargar ejercicio guiado...</option>
+                    <option value="facil">🟢 Fácil: Saludo y suma</option>
+                    <option value="medio">🟡 Medio: Número par o impar</option>
+                    <option value="dificil">🔴 Difícil: Contador con Mientras</option>
+                </select>
+                <button onclick="toggleDarkMode()" class="bg-gray-200 dark:bg-gray-700 p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition" title="Cambiar modo oscuro/claro">
+                    🌓
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="flex-grow max-w-7xl mx-auto w-full p-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+        
+        <!-- Panel 1: Pseudocódigo -->
+        <section class="flex flex-col gap-2">
+            <div class="flex justify-between items-center">
+                <h2 class="font-bold text-lg text-blue-600 dark:text-blue-400">1 · Código de Entrada (Pseudocódigo)</h2>
+                <div class="flex gap-1">
+                    <button onclick="limpiar()" class="text-xs bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 px-2 py-1 rounded hover:bg-red-200">Limpiar</button>
+                    <button onclick="traducir()" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 font-bold">Traducir a Python ➜</button>
+                </div>
+            </div>
+            <textarea id="pseudocodigo" class="flex-grow w-full h-64 lg:h-auto p-3 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-blue-400 outline-none resize-none" placeholder="Escribe tu pseudocódigo aquí..." oninput="guardarLocal()"></textarea>
+            <details class="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+                <summary class="cursor-pointer font-bold text-gray-600 dark:text-gray-400">📖 Glosario de equivalencias</summary>
+                <ul class="mt-2 space-y-1 text-gray-700 dark:text-gray-300 grid grid-cols-2 gap-2">
+                    <li><code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">Escribir</code> → <code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">print()</code></li>
+                    <li><code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">Leer</code> → <code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">input()</code></li>
+                    <li><code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">Si ... Entonces</code> → <code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">if ... :</code></li>
+                    <li><code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">Sino</code> → <code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">else:</code></li>
+                    <li><code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">Mientras ... Hacer</code> → <code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">while ... :</code></li>
+                </ul>
+            </details>
+        </section>
+
+        <!-- Panel 2: Python Generado -->
+        <section class="flex flex-col gap-2">
+            <div class="flex justify-between items-center">
+                <h2 class="font-bold text-lg text-green-600 dark:text-green-400">2 · Código Python Generado</h2>
+                <div class="flex gap-1">
+                    <button onclick="copiarPython()" class="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded hover:bg-gray-300 dark:hover:bg-gray-600">📋 Copiar</button>
+                    <button onclick="descargarPython()" class="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700">⬇️ Descargar .py</button>
+                </div>
+            </div>
+            <div class="relative flex-grow h-64 lg:h-auto">
+                <pre class="h-full rounded border border-gray-300 dark:border-gray-600 overflow-auto"><code id="codigo-python" class="language-python text-sm"># El código Python aparecerá aquí al presionar "Traducir"</code></pre>
+            </div>
+        </section>
+
+        <!-- Panel 3: Simulador y Variables -->
+        <section class="flex flex-col gap-2">
+            <div class="flex justify-between items-center">
+                <h2 class="font-bold text-lg text-purple-600 dark:text-purple-400">3 · Simulador de Ejecución</h2>
+            </div>
+            
+            <!-- Controles de simulación -->
+            <div class="flex gap-2 flex-wrap">
+                <button onclick="iniciarSimulacion()" class="flex-1 bg-green-600 text-white text-sm px-3 py-2 rounded hover:bg-green-700 font-bold">▶ Ejecutar todo</button>
+                <button onclick="pasoAPaso()" class="flex-1 bg-yellow-500 text-white text-sm px-3 py-2 rounded hover:bg-yellow-600 font-bold">⏭ Paso a paso</button>
+                <button onclick="reiniciarSimulacion()" class="bg-gray-500 text-white text-sm px-3 py-2 rounded hover:bg-gray-600">⏹ Reiniciar</button>
+            </div>
+
+            <!-- Visor de Variables -->
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-3 h-32 overflow-y-auto">
+                <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">📦 Estado de la Memoria (Variables)</h3>
+                <div id="visor-variables" class="space-y-1 text-sm">
+                    <p class="text-gray-400 italic">La simulación mostrará las variables aquí.</p>
+                </div>
+            </div>
+
+            <!-- Consola de Salida -->
+            <div class="flex-grow bg-black text-green-400 font-mono text-sm p-3 rounded border border-gray-700 h-48 lg:h-auto overflow-y-auto" id="consola-salida">
+                <span class="text-gray-500"># La salida del programa aparecerá aquí...</span>
+            </div>
+            
+            <!-- Entrada de datos (para simulación paso a paso) -->
+            <div id="panel-input" class="hidden flex gap-2">
+                <input type="text" id="input-usuario" class="flex-grow p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm" placeholder="Ingrese un valor y presione Enter...">
+                <button onclick="enviarInput()" class="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700">Enviar</button>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-gray-100 dark:bg-gray-800 text-center p-4 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700">
+        Herramienta escolar de código abierto · Un solo archivo HTML · Listo para GitHub Pages
+    </footer>
+
+    <!-- Lógica de la Aplicación -->
+    <script>
+        // --- 1. GESTIÓN DE ESTADO Y LOCALSTORAGE ---
+        const textarea = document.getElementById('pseudocodigo');
+        
+        function guardarLocal() {
+            localStorage.setItem('pseudocodigo_guardado', textarea.value);
+        }
+        
+        function cargarLocal() {
+            const guardado = localStorage.getItem('pseudocodigo_guardado');
+            if (guardado) textarea.value = guardado;
+        }
+        cargarLocal();
+
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+        }
+
+        // --- 2. BIBLIOTECA DE EJERCICIOS GRADUADOS ---
+        const ejercicios = {
+            facil: `// Ejercicio Fácil: Saludo y suma\nEscribir "¡Hola! Bienvenido."\nEscribir "Ingrese su nombre:"\nLeer nombre\nEscribir "Ingrese un número:"\nLeer num1\nEscribir "Ingrese otro número:"\nLeer num2\nsuma = num1 + num2\nEscribir "La suma es:", suma`,
+            
+            medio: `// Ejercicio Medio: Par o Impar\nEscribir "Ingrese un número entero:"\nLeer numero\nresto = numero % 2\nSi resto = 0 Entonces\n    Escribir "El número es PAR"\nSino\n    Escribir "El número es IMPAR"\nFinSi`,
+            
+            dificil: `// Ejercicio Difícil: Contador regresivo\nEscribir "Ingrese un número para comenzar la cuenta:"\nLeer contador\nMientras contador > 0 Hacer\n    Escribir "Faltan:", contador, "segundos"\n    contador = contador - 1\nFinMientras\nEscribir "¡Tiempo terminado!"`
+        };
+
+        document.getElementById('selector-ejercicios').addEventListener('change', function() {
+            if (this.value && ejercicios[this.value]) {
+                textarea.value = ejercicios[this.value];
+                guardarLocal();
+                traducir();
+                reiniciarSimulacion();
+            }
+        });
+
+        function limpiar() {
+            textarea.value = '';
+            guardarLocal();
+            reiniciarSimulacion();
+        }
+
+        // --- 3. TRADUCTOR PSEUDOCÓDIGO -> PYTHON ---
+        function traducir() {
+            const lineas = textarea.value.split('\n');
+            let python = [];
+            let indentacion = 0;
+
+            lineas.forEach(linea => {
+                let l = linea.trim();
+                if (!l) return;
+
+                let py = l;
+                let esCierre = false;
+
+                // Comentarios
+                if (l.startsWith('//')) {
+                    py = '# ' + l.substring(2);
+                } 
+                // Escribir
+                else if (l.toLowerCase().startsWith('escribir')) {
+                    let contenido = l.substring(8).trim();
+                    // Convertir comas de PSeInt a comas de Python print
+                    py = `print(${contenido})  # Imprime en pantalla`;
+                } 
+                // Leer
+                else if (l.toLowerCase().startsWith('leer')) {
+                    let vars = l.substring(4).trim();
+                    py = `${vars} = input("Ingrese ${vars}: ")  # Captura dato del usuario`;
+                } 
+                // Si
+                else if (l.toLowerCase().startsWith('si ') && l.toLowerCase().includes('entonces')) {
+                    let condicion = l.substring(3, l.toLowerCase().indexOf('entonces')).trim();
+                    condicion = condicion.replace(/=/g, '==').replace(/\by\b/g, 'and').replace(/\bo\b/g, 'or');
+                    py = `if ${condicion}:  # Condición lógica`;
+                    indentacion++;
+                } 
+                // Sino
+                else if (l.toLowerCase() === 'sino') {
+                    indentacion = Math.max(0, indentacion - 1);
+                    py = ' '.repeat(indentacion * 4) + `else:  # Caso alternativo`;
+                    indentacion++;
+                } 
+                // FinSi
+                else if (l.toLowerCase() === 'finsi') {
+                    indentacion = Math.max(0, indentacion - 1);
+                    py = ' '.repeat(indentacion * 4) + `# Fin de la condición`;
+                    esCierre = true;
+                } 
+                // Mientras
+                else if (l.toLowerCase().startsWith('mientras ') && l.toLowerCase().includes('hacer')) {
+                    let condicion = l.substring(9, l.toLowerCase().indexOf('hacer')).trim();
+                    condicion = condicion.replace(/=/g, '==').replace(/\by\b/g, 'and').replace(/\bo\b/g, 'or');
+                    py = `while ${condicion}:  # Bucle condicional`;
+                    indentacion++;
+                } 
+                // FinMientras
+                else if (l.toLowerCase() === 'finmientras') {
+                    indentacion = Math.max(0, indentacion - 1);
+                    py = ' '.repeat(indentacion * 4) + `# Fin del bucle`;
+                    esCierre = true;
+                }
+                // Asignación
+                else if (l.includes('=') && !l.toLowerCase().startsWith('si') && !l.toLowerCase().startsWith('mientras')) {
+                    let partes = l.split('=');
+                    py = `${partes[0].trim()} = ${partes[1].trim()}  # Asignación de variable`;
+                }
+
+                // Aplicar indentación si no es cierre (que ya la manejó)
+                if (!esCierre && !l.toLowerCase().startsWith('sino')) {
+                    // Si la línea original ya tenía indentación, la respetamos, sino aplicamos la calculada
+                    if (!linea.startsWith(' ') && !linea.startsWith('\t')) {
+                        py = ' '.repeat(indentacion * 4) + py;
+                    }
+                }
+
+                python.push(py);
+            });
+
+            const resultado = python.join('\n');
+            document.getElementById('codigo-python').textContent = resultado;
+            Prism.highlightElement(document.getElementById('codigo-python'));
+        }
+
+        function copiarPython() {
+            const codigo = document.getElementById('codigo-python').textContent;
+            navigator.clipboard.writeText(codigo).then(() => alert('¡Código copiado al portapapeles!'));
+        }
+
+        function descargarPython() {
+            const codigo = document.getElementById('codigo-python').textContent;
+            const blob = new Blob([codigo], { type: 'text/x-python' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'programa_generado.py';
+            a.click();
+        }
+
+        // --- 4. SIMULADOR DE EJECUCIÓN (Intérprete Básico en JS) ---
+        let lineasSimulacion = [];
+        let lineaActual = 0;
+        let variables = {};
+        let esperandoInput = false;
+        let variableInputPendiente = '';
+
+        function reiniciarSimulacion() {
+            lineasSimulacion = textarea.value.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('//'));
+            lineaActual = 0;
+            variables = {};
+            esperandoInput = false;
+            document.getElementById('consola-salida').innerHTML = '<span class="text-gray-500"># Simulación reiniciada. Listo para ejecutar.</span>';
+            document.getElementById('panel-input').classList.add('hidden');
+            actualizarVisorVariables();
+            quitarResaltado();
+        }
+
+        function actualizarVisorVariables() {
+            const visor = document.getElementById('visor-variables');
+            visor.innerHTML = '';
+            if (Object.keys(variables).length === 0) {
+                visor.innerHTML = '<p class="text-gray-400 italic text-xs">Sin variables en memoria</p>';
+            } else {
+                for (let [key, value] of Object.entries(variables)) {
+                    visor.innerHTML += `<div class="flex justify-between text-xs border-b border-gray-200 dark:border-gray-700 py-1"><span class="font-semibold">${key}</span><span class="font-mono text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900 px-1 rounded">${value}</span></div>`;
+                }
+            }
+        }
+
+        function agregarSalida(texto) {
+            const consola = document.getElementById('consola-salida');
+            consola.innerHTML += `<div>${texto}</div>`;
+            consola.scrollTop = consola.scrollHeight;
+        }
+
+        function resaltarLinea(indice) {
+            quitarResaltado();
+            // Nota: El resaltado en textarea es complejo, usamos un truco visual simple o scroll
+            const lineas = textarea.value.split('\n');
+            let charCount = 0;
+            for(let i=0; i<indice; i++) charCount += lineas[i].length + 1;
+            textarea.focus();
+            textarea.setSelectionRange(charCount, charCount + lineas[indice].length);
+        }
+
+        function quitarResaltado() {
+            textarea.setSelectionRange(0, 0);
+        }
+
+        function ejecutarLinea() {
+            if (lineaActual >= lineasSimulacion.length) {
+                agregarSalida('<span class="text-green-500 font-bold">--- ✅ Ejecución finalizada con éxito ---</span>');
+                return false; // Terminó
+            }
+
+            let linea = lineasSimulacion[lineaActual];
+            resaltarLinea(lineaActual); // Resalta en el textarea original
+
+            // 1. ESCRIBIR
+            if (linea.toLowerCase().startsWith('escribir')) {
+                let msg = linea.substring(8).trim();
+                // Reemplazar variables en el string
+                for (let [key, value] of Object.entries(variables)) {
+                    msg = msg.replace(new RegExp(`\\b${key}\\b`, 'g'), value);
+                }
+                // Limpiar comas y comas de PSeInt para la salida
+                msg = msg.replace(/,/g, ' ');
+                agregarSalida(msg.replace(/^["']|["']$/g, ''));
+                lineaActual++;
+                return true;
+            }
+            
+            // 2. LEER
+            else if (linea.toLowerCase().startsWith('leer')) {
+                variableInputPendiente = linea.substring(4).trim();
+                esperandoInput = true;
+                document.getElementById('panel-input').classList.remove('hidden');
+                document.getElementById('input-usuario').focus();
+                agregarSalida(`<span class="text-yellow-400">⏳ Esperando entrada para '${variableInputPendiente}'...</span>`);
+                return false; // Pausa la ejecución
+            }
+
+            // 3. ASIGNACIÓN
+            else if (linea.includes('=') && !linea.toLowerCase().startsWith('si') && !linea.toLowerCase().startsWith('mientras')) {
+                let partes = linea.split('=');
+                let varName = partes[0].trim();
+                let expr = partes[1].trim();
+                
+                // Reemplazar variables conocidas en la expresión
+                let evalExpr = expr;
+                for (let [key, value] of Object.entries(variables)) {
+                    evalExpr = evalExpr.replace(new RegExp(`\\b${key}\\b`, 'g'), value);
+                }
+
+                try {
+                    // Evaluación segura básica para operaciones matemáticas
+                    if (/^[\d\s\+\-\*\/\(\)\.]+$/.test(evalExpr)) {
+                        variables[varName] = eval(evalExpr);
+                    } else {
+                        variables[varName] = evalExpr; // Si es texto o no se puede evaluar, se guarda como string
+                    }
+                } catch (e) {
+                    variables[varName] = expr;
+                }
+                actualizarVisorVariables();
+                lineaActual++;
+                return true;
+            }
+
+            // 4. ESTRUCTURAS DE CONTROL (Simplificadas para el simulador)
+            else if (linea.toLowerCase().startsWith('si ') || linea.toLowerCase().startsWith('mientras ')) {
+                // En esta versión básica, saltamos la evaluación de condiciones complejas en el paso a paso visual
+                // y asumimos que el flujo sigue, pero en una versión avanzada se parsearía el AST.
+                lineaActual++;
+                return true;
+            }
+            else if (linea.toLowerCase() === 'finsi' || linea.toLowerCase() === 'finmientras' || linea.toLowerCase() === 'sino') {
+                lineaActual++;
+                return true;
+            }
+
+            // Si no se reconoce, avanzar
+            lineaActual++;
+            return true;
+        }
+
+        function iniciarSimulacion() {
+            reiniciarSimulacion();
+            // Ejecutar en bucle hasta que termine o pida input
+            // Para evitar congelar el navegador, usamos un pequeño timeout
+            setTimeout(() => {
+                let continuo = true;
+                while (continuo && lineaActual < lineasSimulacion.length && !esperandoInput) {
+                    continuo = ejecutarLinea();
+                }
+            }, 100);
+        }
+
+        function pasoAPaso() {
+            if (lineaActual === 0 && lineasSimulacion.length === 0) {
+                reiniciarSimulacion();
+            }
+            if (!esperandoInput) {
+                ejecutarLinea();
+            }
+        }
+
+        function enviarInput() {
+            const inputEl = document.getElementById('input-usuario');
+            const valor = inputEl.value;
+            variables[variableInputPendiente] = valor;
+            actualizarVisorVariables();
+            agregarSalida(`<span class="text-gray-400">> ${valor}</span>`);
+            
+            esperandoInput = false;
+            variableInputPendiente = '';
+            inputEl.value = '';
+            document.getElementById('panel-input').classList.add('hidden');
+            
+            lineaActual++;
+            // Continuar si estaba en modo "Ejecutar todo" (podría mejorarse con un flag)
+        }
+
+        // Permitir Enter en el input
+        document.getElementById('input-usuario').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') enviarInput();
+        });
+
+        // Inicializar
+        reiniciarSimulacion();
+    </script>
+</body>
+</html>
